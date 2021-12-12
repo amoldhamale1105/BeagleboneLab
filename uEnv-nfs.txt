@@ -1,0 +1,8 @@
+console=ttyO0,115200n8
+ipaddr=192.167.1.152
+serverip=192.167.1.1
+fdtaddr=0x88000000
+rootpath=/srv/nfs/rootfs,nfsvers=3,nolock,wsize=1024,rsize=1024 rootwait rootdelay=5
+netargs=echo Running netargs...; setenv bootargs console=${console} root=/dev/nfs rw rootfstype=nfs ip=${ipaddr} nfsroot=${serverip}:${rootpath}
+loadtftp=echo Booting from network ...; tftpboot ${loadaddr} ${serverip}:uImage; tftpboot ${fdtaddr} ${serverip}:am335x-boneblack.dtb;
+uenvcmd=setenv autoload no; run netargs; run loadtftp;  bootm ${loadaddr} - ${fdtaddr}

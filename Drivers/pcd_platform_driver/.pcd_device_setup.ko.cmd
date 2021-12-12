@@ -1,0 +1,1 @@
+cmd_/home/amol/Projects/BBB/Drivers/pcd_platform_driver/pcd_device_setup.ko := ld -r -m elf_x86_64  --build-id=sha1  -T scripts/module.lds -o /home/amol/Projects/BBB/Drivers/pcd_platform_driver/pcd_device_setup.ko /home/amol/Projects/BBB/Drivers/pcd_platform_driver/pcd_device_setup.o /home/amol/Projects/BBB/Drivers/pcd_platform_driver/pcd_device_setup.mod.o;  true

@@ -1,0 +1,1 @@
+cmd_/home/amol/Projects/BBB/Drivers/helloworld/main.ko := arm-linux-gnueabihf-ld -EL -r  -T ./scripts/module-common.lds --build-id  -o /home/amol/Projects/BBB/Drivers/helloworld/main.ko /home/amol/Projects/BBB/Drivers/helloworld/main.o /home/amol/Projects/BBB/Drivers/helloworld/main.mod.o ;  true

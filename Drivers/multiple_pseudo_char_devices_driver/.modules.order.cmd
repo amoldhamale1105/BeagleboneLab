@@ -1,0 +1,1 @@
+cmd_/home/amol/Projects/BBB/Drivers/multiple_pseudo_char_devices_driver/modules.order := {   echo /home/amol/Projects/BBB/Drivers/multiple_pseudo_char_devices_driver/pcd_m.ko; :; } | awk '!x[$$0]++' - > /home/amol/Projects/BBB/Drivers/multiple_pseudo_char_devices_driver/modules.order

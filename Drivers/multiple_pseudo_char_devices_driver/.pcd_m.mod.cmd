@@ -1,0 +1,1 @@
+cmd_/home/amol/Projects/BBB/Drivers/multiple_pseudo_char_devices_driver/pcd_m.mod := { echo  /home/amol/Projects/BBB/Drivers/multiple_pseudo_char_devices_driver/pcd_m.o;  echo; } > /home/amol/Projects/BBB/Drivers/multiple_pseudo_char_devices_driver/pcd_m.mod
