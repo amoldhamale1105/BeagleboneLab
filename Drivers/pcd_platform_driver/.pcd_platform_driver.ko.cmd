@@ -1,1 +1,0 @@
-cmd_/home/amol/Projects/BBB/Drivers/pcd_platform_driver/pcd_platform_driver.ko := ld -r -m elf_x86_64  --build-id=sha1  -T scripts/module.lds -o /home/amol/Projects/BBB/Drivers/pcd_platform_driver/pcd_platform_driver.ko /home/amol/Projects/BBB/Drivers/pcd_platform_driver/pcd_platform_driver.o /home/amol/Projects/BBB/Drivers/pcd_platform_driver/pcd_platform_driver.mod.o;  true

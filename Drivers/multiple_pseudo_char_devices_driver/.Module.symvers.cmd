@@ -1,1 +1,0 @@
-cmd_/home/amol/Projects/BBB/Drivers/multiple_pseudo_char_devices_driver/Module.symvers := sed 's/ko$$/o/' /home/amol/Projects/BBB/Drivers/multiple_pseudo_char_devices_driver/modules.order | scripts/mod/modpost -m -a   -o /home/amol/Projects/BBB/Drivers/multiple_pseudo_char_devices_driver/Module.symvers -e -i Module.symvers   -T -

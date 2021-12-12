@@ -1,1 +1,0 @@
-cmd_/home/amol/Projects/BBB/Drivers/pcd_platform_driver/modules.order := {   echo /home/amol/Projects/BBB/Drivers/pcd_platform_driver/pcd_device_setup.ko;   echo /home/amol/Projects/BBB/Drivers/pcd_platform_driver/pcd_platform_driver.ko; :; } | awk '!x[$$0]++' - > /home/amol/Projects/BBB/Drivers/pcd_platform_driver/modules.order
