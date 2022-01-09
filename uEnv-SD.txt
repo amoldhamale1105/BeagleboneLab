@@ -1,10 +1,11 @@
-console=ttyO0,115200n8
-serverip=192.167.1.1
-loadaddr=0x82000000
-fdtaddr=0x88000000
-rootpath=/srv/nfs/rootfs,nolock,wsize=1024,rsize=1024 rootwait rootdelay=5
-loadfromsd=load mmc 0:2 ${loadaddr} /boot/uImage;load mmc 0:2 ${fdtaddr} /boot/am335x-boneblack.dtb
-nfsbootargs=setenv bootargs console=${console} root=/dev/nfs rw nfsroot=${serverip}:${rootpath}
-linuxbootargs=setenv bootargs console=${console} root=/dev/mmcblk0p2 rw 
-uenvcmd=setenv autoload no; run loadfromsd; if ${netbootcmd}; then echo booting from nfs; run nfsbootargs; else echo booting from sd; run linuxbootargs; fi; bootm ${loadaddr} - ${fdtaddr}
-
+console=ttyS0,115200n8
+overlays=pcdev0.dtbo pcdev1.dtbo
+dtb=am335x-boneblack.dtb
+dtbopath=/lib/firmware
+ovenvsetup=setenv fdtaddr 0x87f00000;setenv fdtovaddr 0x87fc0000;
+fdtload=load mmc 0:1 ${fdtaddr} ${dtb};
+fdtcmd=fdt addr $fdtaddr;fdt resize 8192;
+fdtovload=for i in ${overlays};do echo Applying overlay...;load mmc 0:2 ${fdtovaddr} ${dtbopath}/${i};fdt apply $fdtovaddr;done
+bootsettings=setenv bootargs console=ttyO0,115200n8 root=/dev/mmcblk0p2 rw rootfstype=ext4 rootwait earlyprintk mem=512M
+mmcboot=run ovenvsetup; run fdtload; run fdtcmd; run fdtovload; echo Booting from microSD ...; setenv autoload no ; load mmc 0:1 ${loadaddr} uImage ; run bootsettings ; bootm ${loadaddr} - ${fdtaddr}
+uenvcmd=run mmcboot
