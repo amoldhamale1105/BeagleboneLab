@@ -31,6 +31,7 @@ struct gpiodrv_private_data
 {
     int total_devices;
     struct class *class_gpio;
+    struct device **dev;
 };
 
 struct gpiodrv_private_data gpio_drv_data;
@@ -42,27 +43,61 @@ struct of_device_id gpio_device_match[] = {
 
 ssize_t direction_show(struct device* dev, struct device_attribute *attr, char* buf)
 {
-    return 0;
+    struct gpiodev_private_data *dev_data = dev_get_drvdata(dev);
+    int dir;
+    char* direction;
+
+    dir = gpiod_get_direction(dev_data->desc);
+    if(dir < 0)
+        return dir;
+    //if direction = 0 show out if 1 show in
+    direction = dir == 0 ? "out" : "in";
+
+    return sprintf(buf,"%s\n",direction);
 }
 
 ssize_t direction_store(struct device* dev, struct device_attribute *attr, const char* buf, size_t count)
 {
-    return 0;
+    int ret;
+    struct gpiodev_private_data *dev_data = dev_get_drvdata(dev);
+
+    //Using kernel provided string compare func instead of strcmp to be able to compare strings ending with newline character followed by null termination
+    if(sysfs_streq(buf,"in"))
+        ret = gpiod_direction_input(dev_data->desc);
+    else if(sysfs_streq(buf,"out"))
+        ret = gpiod_direction_output(dev_data->desc, 0);
+    else
+        ret = -EINVAL;
+    
+    return ret ? ret : count;
 }
 
 ssize_t value_show(struct device* dev, struct device_attribute *attr, char* buf)
 {
-    return 0;
+    struct gpiodev_private_data *dev_data = dev_get_drvdata(dev);
+    int value;
+    value = gpiod_get_value(dev_data->desc);
+    return sprintf(buf,"%d\n",value);
 }
 
 ssize_t value_store(struct device* dev, struct device_attribute *attr, const char* buf, size_t count)
 {
-    return 0;
+    struct gpiodev_private_data *dev_data = dev_get_drvdata(dev);
+    int ret;
+    long value;
+
+    ret = kstrtol(buf,0,&value);
+    if(ret)
+        return ret;
+    gpiod_set_value(dev_data->desc, value);
+
+    return count;
 }
 
 ssize_t label_show(struct device* dev, struct device_attribute *attr, char* buf)
 {
-    return 0;
+    struct gpiodev_private_data *dev_data = dev_get_drvdata(dev);
+    return sprintf(buf,"%s\n",dev_data->label);
 }
 
 static DEVICE_ATTR_RW(direction);
@@ -87,13 +122,18 @@ static const struct attribute_group *gpio_attr_groups[] = {
 
 int gpio_sysfs_remove(struct platform_device *pdev)
 {
+    int i;
+    dev_info(&pdev->dev,"Remove called!\n");
+    for(i = 0; i < gpio_drv_data.total_devices; i++)
+    {
+        device_unregister(gpio_drv_data.dev[i]);
+    }
     return 0;
 }
 
 int gpio_sysfs_probe(struct platform_device *pdev)
 {
     struct device *dev = &pdev->dev;
-    struct device* dev_sysfs;
     const char* name;
     int i = 0, ret;
 
@@ -104,6 +144,14 @@ int gpio_sysfs_probe(struct platform_device *pdev)
     struct device_node *child = NULL;
 
     struct gpiodev_private_data *dev_data;
+    gpio_drv_data.total_devices = of_get_child_count(parent);
+    if(!gpio_drv_data.total_devices){
+        dev_err(dev,"No devices found!\n");
+        return -EINVAL;
+    }
+    
+    dev_info(dev,"Total devices found = %d\n",gpio_drv_data.total_devices);
+    gpio_drv_data.dev = devm_kzalloc(dev, sizeof(struct device*)*gpio_drv_data.total_devices, GFP_KERNEL);
     
     for_each_available_child_of_node(parent,child)
     {
@@ -138,10 +186,10 @@ int gpio_sysfs_probe(struct platform_device *pdev)
         }
 
         //Create devices under /sys/class/bone_gpios
-        dev_sysfs = device_create_with_groups(gpio_drv_data.class_gpio,dev,0,dev_data,gpio_attr_groups,dev_data->label);
-        if(IS_ERR(dev_sysfs)){
+        gpio_drv_data.dev[i] = device_create_with_groups(gpio_drv_data.class_gpio,dev,0,dev_data,gpio_attr_groups,dev_data->label);
+        if(IS_ERR(gpio_drv_data.dev[i])){
             dev_err(dev,"Error in device create\n");
-            return PTR_ERR(dev_sysfs);
+            return PTR_ERR(gpio_drv_data.dev[i]);
         }
         
         i++;
@@ -173,6 +221,10 @@ int __init gpio_sysfs_init(void)
 
 void __exit gpio_sysfs_exit(void)
 {
-    class_destroy(gpio_drv_data.class_gpio);
     platform_driver_unregister(&gpiosysfs_platform_driver);
+    class_destroy(gpio_drv_data.class_gpio);
+    pr_info("gpio driver unloaded\n");
 }
+
+module_init(gpio_sysfs_init);
+module_exit(gpio_sysfs_exit);
