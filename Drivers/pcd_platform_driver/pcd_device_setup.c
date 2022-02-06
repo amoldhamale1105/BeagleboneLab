@@ -34,7 +34,7 @@ struct pcdev_platform_data pcdev_pdata[] = {
     }
 };
 
-//Create 2 platform devices
+//Create multiple platform devices
 
 struct platform_device platform_pcdev1 = {
 	.name = "pcdev-A1x",

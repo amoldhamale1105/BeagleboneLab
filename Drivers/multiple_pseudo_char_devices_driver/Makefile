@@ -18,3 +18,6 @@ host:
 
 host-clean:
 	make -C $(HOST_KERN_DIR) M=$(PWD) clean
+
+copy-driver:
+	scp *.ko debian@192.168.7.2:/home/debian/drivers
