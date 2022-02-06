@@ -12,6 +12,7 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/slab.h>
+#include <linux/mutex.h>
 #include "platform.h"
 
 #undef pr_fmt
@@ -38,6 +39,7 @@ struct pcdev_private_data
     char* buffer;
     dev_t dev_num;
     struct cdev cdev;
+    struct mutex pcd_lock;
 };
 
 //Driver private data structure

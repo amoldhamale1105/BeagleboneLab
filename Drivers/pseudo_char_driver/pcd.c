@@ -4,6 +4,8 @@
 #include <linux/device.h>
 #include <linux/kdev_t.h>
 #include <linux/uaccess.h>
+#include <linux/spinlock.h>
+#include <linux/mutex.h>
 
 #define DEV_MEM_SIZE 512
 
@@ -16,6 +18,9 @@ char device_buffer[DEV_MEM_SIZE];
 dev_t device_number;
 
 struct cdev pcd_cdev;
+
+//static DEFINE_SPINLOCK(pcd_spinlock);
+static DEFINE_MUTEX(pcd_mutexlock);
 
 loff_t pcd_lseek(struct file *filp, loff_t offset, int whence)
 {
@@ -52,6 +57,14 @@ loff_t pcd_lseek(struct file *filp, loff_t offset, int whence)
 
 ssize_t pcd_read(struct file *filp, char __user *buff, size_t count, loff_t *f_pos)
 {
+    //spin_lock(&pcd_spinlock); //Not suitable since critical section may sleep
+    //mutex_lock(&pcd_mutexlock);
+
+    /*Returns 0 on acquiring lock or error code -EINTR on interrupt
+    Better option over simple mutex which may never return on process termination*/
+    if(mutex_lock_interruptible(&pcd_mutexlock))
+        return -EINTR;
+
 	pr_info("read requested for %zu bytes\n", count);
 	pr_info("Current file position = %lld\n", *f_pos);
 	
@@ -64,6 +77,9 @@ ssize_t pcd_read(struct file *filp, char __user *buff, size_t count, loff_t *f_p
 	*f_pos += count;
 	pr_info("Number of bytes successfully read = %zu\n", count);
 	pr_info("Updated file position = %lld\n", *f_pos);
+    
+    //spin_unlock(&pcd_spinlock);
+    mutex_unlock(&pcd_mutexlock);
 
 	//Return the number of bytes successfully read
 	return count;
@@ -71,6 +87,14 @@ ssize_t pcd_read(struct file *filp, char __user *buff, size_t count, loff_t *f_p
 
 ssize_t pcd_write(struct file *filp, const char __user *buff, size_t count, loff_t *f_pos)
 {
+    //spin_lock(&pcd_spinlock); //Not suitable since critical section may sleep
+    //mutex_lock(&pcd_mutexlock);
+
+    /*Returns 0 on acquiring lock or error code -EINTR on interrupt
+    Better option over simple mutex which may never return on process termination*/
+    if(mutex_lock_interruptible(&pcd_mutexlock))
+        return -EINTR;
+
 	pr_info("write requested for %zu bytes\n", count);
 	pr_info("Current file position = %lld\n", *f_pos);
 	
@@ -86,6 +110,9 @@ ssize_t pcd_write(struct file *filp, const char __user *buff, size_t count, loff
 	*f_pos += count;
 	pr_info("Number of bytes successfully written = %zu\n", count);
 	pr_info("Updated file position = %lld\n", *f_pos);
+
+    //spin_unlock(&pcd_spinlock);
+    mutex_unlock(&pcd_mutexlock);
 
 	//Return the number of bytes successfully written
 	return count;

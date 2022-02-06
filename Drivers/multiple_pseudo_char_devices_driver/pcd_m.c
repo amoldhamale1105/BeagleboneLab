@@ -29,6 +29,8 @@ struct pcdev_private_data
 	const char* serial_number;
 	int perm;
 	struct cdev cdev;
+    //struct spinlock_t pcdev_lock;
+    struct mutex pcdev_lock;
 };
 
 //Driver private data structure
@@ -115,7 +117,10 @@ ssize_t pcd_read(struct file *filp, char __user *buff, size_t count, loff_t *f_p
 {
 	struct pcdev_private_data *pcdev_data = (struct pcdev_private_data*)filp->private_data;
 	int max_size = pcdev_data->size;
-	pr_info("read requested for %zu bytes\n", count);
+    
+    mutex_lock(&pcdev_data->pcdev_lock);
+	
+    pr_info("read requested for %zu bytes\n", count);
 	pr_info("Current file position = %lld\n", *f_pos);
 	
 	if((*f_pos + count) > max_size)
@@ -128,6 +133,8 @@ ssize_t pcd_read(struct file *filp, char __user *buff, size_t count, loff_t *f_p
 	pr_info("Number of bytes successfully read = %zu\n", count);
 	pr_info("Updated file position = %lld\n", *f_pos);
 
+    mutex_unlock(&pcdev_data->pcdev_lock);
+
 	//Return the number of bytes successfully read
 	return count;
 }
@@ -136,6 +143,8 @@ ssize_t pcd_write(struct file *filp, const char __user *buff, size_t count, loff
 {
 	struct pcdev_private_data *pcdev_data = (struct pcdev_private_data*)filp->private_data;
 	int max_size = pcdev_data->size;
+
+    mutex_lock(&pcdev_data->pcdev_lock);
 	pr_info("write requested for %zu bytes\n", count);
 	pr_info("Current file position = %lld\n", *f_pos);
 	
@@ -151,6 +160,8 @@ ssize_t pcd_write(struct file *filp, const char __user *buff, size_t count, loff
 	*f_pos += count;
 	pr_info("Number of bytes successfully written = %zu\n", count);
 	pr_info("Updated file position = %lld\n", *f_pos);
+
+    mutex_unlock(&pcdev_data->pcdev_lock);
 
 	//Return the number of bytes successfully written
 	return count;
@@ -227,6 +238,11 @@ static int __init pcd_driver_init(void)
 	for(i=0; i<NO_OF_DEVICES;i++)
 	{
 		pr_info("Device number <major>:<minor> = %d:%d\n", MAJOR(pcdrv_data.device_number+i), MINOR(pcdrv_data.device_number+i));
+        
+        //Initialize spinlock or mutex
+        //spin_lock_init(&pcdrv_data.pcdev_data[i].pcdev_lock);
+        mutex_init(&pcdrv_data.pcdev_data[i].pcdev_lock);
+
 		cdev_init(&pcdrv_data.pcdev_data[i].cdev, &pcd_fops);
 	 
 		//Register device with VFS

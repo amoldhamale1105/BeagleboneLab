@@ -34,14 +34,22 @@ struct file_operations pcd_fops=
 
 ssize_t show_max_size(struct device *dev, struct device_attribute *attr, char* buf)
 {
+    ssize_t ret;
     struct pcdev_private_data *dev_data = dev_get_drvdata(dev->parent);
-    return sprintf(buf,"%d\n",dev_data->pdata.size);
+    mutex_lock(&dev_data->pcd_lock);
+    ret = sprintf(buf,"%d\n",dev_data->pdata.size);
+    mutex_unlock(&dev_data->pcd_lock);
+    return ret;
 }
 
 ssize_t show_serial_num(struct device *dev, struct device_attribute *attr, char* buf)
 {
+    ssize_t ret;
     struct pcdev_private_data *dev_data = dev_get_drvdata(dev->parent);
-    return sprintf(buf,"%s\n",dev_data->pdata.serial_number);
+    mutex_lock(&dev_data->pcd_lock);
+    ret = sprintf(buf,"%s\n",dev_data->pdata.serial_number);
+    mutex_unlock(&dev_data->pcd_lock);
+    return ret;
 }
 
 ssize_t store_max_size(struct device *dev, struct device_attribute* attr, const char* buf, size_t count)
@@ -50,6 +58,7 @@ ssize_t store_max_size(struct device *dev, struct device_attribute* attr, const 
     int ret;
     struct pcdev_private_data *dev_data = dev_get_drvdata(dev->parent);
 
+    mutex_lock(&dev_data->pcd_lock);
     //kernel method to convert string to long
     ret = kstrtol(buf, 0, &result);
     if(ret)
@@ -59,6 +68,7 @@ ssize_t store_max_size(struct device *dev, struct device_attribute* attr, const 
     //Reallocate memory for buffer since there's a change of size
     dev_data->buffer = krealloc(dev_data->buffer, dev_data->pdata.size, GFP_KERNEL);
 
+    mutex_unlock(&dev_data->pcd_lock);
     return count;
 }
 
@@ -164,6 +174,8 @@ int pcd_platform_driver_probe(struct platform_device* pdev)
         goto out;
     }
 
+    mutex_init(&dev_data->pcd_lock);
+    
     //Save dev private data in the platform device driver data field
     //pdev->dev.driver_data = dev_data;
     dev_set_drvdata(&pdev->dev, dev_data);
