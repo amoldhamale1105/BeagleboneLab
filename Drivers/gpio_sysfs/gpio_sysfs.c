@@ -10,7 +10,7 @@
 #include <linux/of_device.h>
 #include <linux/slab.h>
 #include <linux/gpio/consumer.h>
-//#include "platform.h"
+#include <linux/mutex.h>
 
 #undef pr_fmt
 #define pr_fmt(fmt) "%s :" fmt,__func__
@@ -24,6 +24,7 @@ struct gpiodev_private_data
 {
     char label[20];
     struct gpio_desc* desc;
+    struct mutex gpio_lock;
 };
 
 //Driver private data structure
@@ -45,22 +46,31 @@ ssize_t direction_show(struct device* dev, struct device_attribute *attr, char* 
 {
     struct gpiodev_private_data *dev_data = dev_get_drvdata(dev);
     int dir;
+    ssize_t ret;
     char* direction;
 
+    mutex_lock(&dev_data->gpio_lock);
     dir = gpiod_get_direction(dev_data->desc);
-    if(dir < 0)
-        return dir;
+    if(dir < 0){
+        ret = dir;
+        goto out;
+    }
     //if direction = 0 show out if 1 show in
     direction = dir == 0 ? "out" : "in";
 
-    return sprintf(buf,"%s\n",direction);
+    ret = sprintf(buf,"%s\n",direction);
+
+out:
+    mutex_unlock(&dev_data->gpio_lock);
+    return ret;
 }
 
 ssize_t direction_store(struct device* dev, struct device_attribute *attr, const char* buf, size_t count)
 {
-    int ret;
+    ssize_t ret;
     struct gpiodev_private_data *dev_data = dev_get_drvdata(dev);
 
+    mutex_lock(&dev_data->gpio_lock);
     //Using kernel provided string compare func instead of strcmp to be able to compare strings ending with newline character followed by null termination
     if(sysfs_streq(buf,"in"))
         ret = gpiod_direction_input(dev_data->desc);
@@ -68,6 +78,7 @@ ssize_t direction_store(struct device* dev, struct device_attribute *attr, const
         ret = gpiod_direction_output(dev_data->desc, 0);
     else
         ret = -EINVAL;
+    mutex_unlock(&dev_data->gpio_lock);
     
     return ret ? ret : count;
 }
@@ -76,28 +87,43 @@ ssize_t value_show(struct device* dev, struct device_attribute *attr, char* buf)
 {
     struct gpiodev_private_data *dev_data = dev_get_drvdata(dev);
     int value;
+    ssize_t ret;
+    
+    mutex_lock(&dev_data->gpio_lock);
     value = gpiod_get_value(dev_data->desc);
-    return sprintf(buf,"%d\n",value);
+    ret = sprintf(buf,"%d\n",value);
+    mutex_unlock(&dev_data->gpio_lock);
+    
+    return ret;
 }
 
 ssize_t value_store(struct device* dev, struct device_attribute *attr, const char* buf, size_t count)
 {
     struct gpiodev_private_data *dev_data = dev_get_drvdata(dev);
-    int ret;
+    ssize_t ret;
     long value;
 
+    mutex_lock(&dev_data->gpio_lock);
     ret = kstrtol(buf,0,&value);
     if(ret)
-        return ret;
+        goto out;
     gpiod_set_value(dev_data->desc, value);
 
-    return count;
+    ret = count;
+
+out:
+    mutex_unlock(&dev_data->gpio_lock);
+    return ret;
 }
 
 ssize_t label_show(struct device* dev, struct device_attribute *attr, char* buf)
 {
+    ssize_t ret;
     struct gpiodev_private_data *dev_data = dev_get_drvdata(dev);
-    return sprintf(buf,"%s\n",dev_data->label);
+    mutex_lock(&dev_data->gpio_lock);
+    ret = sprintf(buf,"%s\n",dev_data->label);
+    mutex_unlock(&dev_data->gpio_lock);
+    return ret;
 }
 
 static DEVICE_ATTR_RW(direction);
@@ -160,6 +186,8 @@ int gpio_sysfs_probe(struct platform_device *pdev)
             dev_err(dev,"Cannot allocate memory\n");
             return -ENOMEM;
         }
+
+        mutex_init(&dev_data->gpio_lock);
         
         if(of_property_read_string(child, "label", &name)){
             dev_warn(dev,"Missing label info\n");
