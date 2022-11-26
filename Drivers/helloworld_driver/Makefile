@@ -2,7 +2,7 @@ obj-m := main.o
 ARCH=arm
 CROSS_COMPILE=arm-linux-gnueabihf-
 KERN_DIR=/home/amol/Projects/BBB/linux/
-HOST_KERN_DIR=/lib/modules/5.11.0-38-generic/build/
+HOST_KERN_DIR=/lib/modules/$(shell uname -r)/build/
 
 all:
 	make ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) -C $(KERN_DIR) M=$(PWD) modules
