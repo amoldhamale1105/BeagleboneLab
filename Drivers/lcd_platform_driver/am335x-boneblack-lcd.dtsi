@@ -1,0 +1,37 @@
+/ {
+    lcd16x2 {
+        compatible = "org,lcd16x2"
+        pinctrl-single,names = "default";
+        pinctrl-0 = <&p8_gpios>;
+        status = "okay"
+        rs-gpios = <&gpio2 6 GPIO_ACTIVE_HIGH>;
+        rw-gpios = <&gpio2 7 GPIO_ACTIVE_HIGH>;
+        en-gpios = <&gpio2 8 GPIO_ACTIVE_HIGH>;
+        data-gpios = <&gpio2 9 GPIO_ACTIVE_HIGH>,
+                    <&gpio2 10 GPIO_ACTIVE_HIGH>,
+                    <&gpio2 11 GPIO_ACTIVE_HIGH>,
+                    <&gpio2 12 GPIO_ACTIVE_HIGH>;
+    };
+
+};
+
+/* Because this device node claims the same pins which we do from the pin controller for the LCD application
+Check out arch/arm/boot/dts/am335x-boneblack-common.dtsi for details */
+&tda19988 {
+    status = "disabled";
+};
+
+&am33xx_pinmux {
+
+    p8_gpios: bone_p8_gpios {
+        pinctrl-single,pins = <
+            AM33XX_PADCONF(AM335X_PIN_LCD_DATA0, PIN_OUTPUT, MUX_MODE7)
+            AM33XX_PADCONF(AM335X_PIN_LCD_DATA1, PIN_OUTPUT, MUX_MODE7)
+            AM33XX_PADCONF(AM335X_PIN_LCD_DATA2, PIN_OUTPUT, MUX_MODE7)
+            AM33XX_PADCONF(AM335X_PIN_LCD_DATA3, PIN_OUTPUT, MUX_MODE7)
+            AM33XX_PADCONF(AM335X_PIN_LCD_DATA4, PIN_OUTPUT, MUX_MODE7)
+            AM33XX_PADCONF(AM335X_PIN_LCD_DATA5, PIN_OUTPUT, MUX_MODE7)
+            AM33XX_PADCONF(AM335X_PIN_LCD_DATA6, PIN_OUTPUT, MUX_MODE7)
+            >;
+    };
+};

@@ -148,7 +148,7 @@ int pcd_platform_driver_probe(struct platform_device* pdev)
     
     dev_info(dev, "Device detected\n");
 
-    //Match will be NULL if kernel does not support device tree i.e CONFIG_OF if off
+    //Match will be NULL if kernel does not support device tree i.e CONFIG_OF is off
     match = (struct of_device_id*)of_match_device(pdev->dev.driver->of_match_table, dev);
 
     if(match){
