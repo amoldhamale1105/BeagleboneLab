@@ -3,13 +3,12 @@
 
 #include <linux/module.h>
 #include <linux/fs.h>
-#include <linux/cdev.h>
-#include <linux/device.h>
 #include <linux/kdev_t.h>
 #include <linux/uaccess.h>
 #include <linux/platform_device.h>
 #include <linux/mod_devicetable.h>
 #include <linux/of.h>
+#include <linux/gpio/consumer.h>
 #include <linux/of_device.h>
 #include <linux/slab.h>
 #include <linux/mutex.h>
@@ -36,7 +35,7 @@ ssize_t lcdxy_store(struct device*, struct device_attribute*, const char*, size_
 //Device private data structure
 struct lcd_private_data
 {
-    struct gpio_desc* desc;
+    struct gpio_desc** desc;
     struct gpio_descs* desc_arr;
     struct mutex lcd_lock;
 };
@@ -45,7 +44,7 @@ struct lcd_private_data
 struct drv_private_data
 {
     struct class *class_lcd;
-    struct device *device_lcd;
+    struct device *dev_lcd;
 };
 
 #endif

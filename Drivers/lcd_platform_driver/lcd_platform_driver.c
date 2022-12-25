@@ -40,7 +40,7 @@ static struct attribute_group lcd_attr_group = {
     .attrs = lcd_attrs
 };
 
-struct attribute_group* lcd_attr_groups[] = {
+const struct attribute_group* lcd_attr_groups[] = {
     &lcd_attr_group,
     NULL
 };
@@ -66,6 +66,65 @@ void __exit lcd_driver_exit(void)
 
 int lcd_driver_probe(struct platform_device* pdev)
 {
+    struct device* dev = &pdev->dev;
+    struct lcd_private_data* dev_data = NULL;
+    struct of_device_id* match = NULL;
+    int i = 0, ret;
+
+    dev_info(dev, "16x2 LCD detected\n");
+
+    match = (struct of_device_id*)of_match_device(dev->driver->of_match_table, dev);
+    if (match == NULL){
+        dev_err(dev, "Connected LCD does not have a device tree config\n");
+        return -EINVAL;
+    }
+
+    dev_data = (struct lcd_private_data*)devm_kzalloc(dev, sizeof(struct lcd_private_data), GFP_KERNEL);
+    if (dev_data == NULL){
+        dev_err(dev, "Can't allocate memory\n");
+        return -ENOMEM;
+    }
+
+    mutex_init(&dev_data->lcd_lock);
+
+    /* Save device private data for future use */
+    dev->driver_data = (void*)dev_data;
+
+    /* Allocate memory for 3 command gpio descriptor addresses (rs, rw, en) */
+    dev_data->desc = (struct gpio_desc**)devm_kzalloc(dev, sizeof(struct gpio_desc*)*3, GFP_KERNEL);
+    
+    dev_data->desc[0] = devm_gpiod_get(dev, "rs", GPIOD_ASIS);
+    dev_data->desc[1] = devm_gpiod_get(dev, "rw", GPIOD_ASIS);
+    dev_data->desc[2] = devm_gpiod_get(dev, "en", GPIOD_ASIS);
+    dev_data->desc_arr = devm_gpiod_get_array(dev, "data", GPIOD_ASIS);
+    
+    if ((ret = gpiod_direction_output(dev_data->desc[0], 0))){
+        dev_err(dev, "Direction setting failed for rs pin\n");
+        return ret;
+    }
+    if ((ret = gpiod_direction_output(dev_data->desc[1], 0))){
+        dev_err(dev, "Direction setting failed for rw pin\n");
+        return ret;
+    }
+    if ((ret = gpiod_direction_output(dev_data->desc[2], 0))){
+        dev_err(dev, "Direction setting failed for en pin\n");
+        return ret;
+    }
+
+    for(i = 0; i < dev_data->desc_arr->ndescs; i++)
+    {
+        if ((ret = gpiod_direction_output(dev_data->desc_arr->desc[i], 0))){
+            dev_err(dev, "Direction setting failed for D%d pin\n", i+4);
+            return ret;
+        }
+    }
+    
+    drv_data.dev_lcd = device_create_with_groups(drv_data.class_lcd, dev, 0, dev_data, lcd_attr_groups, "LCD16x2");
+    if(IS_ERR(drv_data.dev_lcd)){
+        dev_err(dev, "Error in device creation\n");
+        return PTR_ERR(drv_data.dev_lcd);
+    }
+    
     return 0;
 }
 
