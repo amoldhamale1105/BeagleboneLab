@@ -47,12 +47,20 @@ struct attribute_group* lcd_attr_groups[] = {
 
 int __init lcd_driver_init(void)
 {
+    drv_data.class_lcd = class_create(THIS_MODULE, "lcd");
+    if(IS_ERR(drv_data.class_lcd)){
+        pr_err("Error in creating class\n");
+        return PTR_ERR(drv_data.class_lcd);
+    }
+    platform_driver_register(&lcd_driver);
     pr_info("lcd driver loaded successfully\n");
     return 0;
 }
 
 void __exit lcd_driver_exit(void)
 {
+    platform_driver_unregister(&lcd_driver);
+    class_destroy(drv_data.class_lcd);
     pr_info("lcd driver unloaded\n");
 }
 
