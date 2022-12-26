@@ -1,19 +1,22 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdint.h>
-#include <stdarg.h>
-#include <unistd.h>
-
-#include "gpio.h"
+#include <linux/delay.h>
 #include "lcd.h"
+#include "lcd_platform_driver.h"
 
-static void write_4_bits(uint8_t data);
-
-void lcd_deinit(void)
+void gpio_write_value(struct device* dev, int pin_type, int index, char out_value)
 {
-	lcd_display_clear();      	  /* Clear display */
-	lcd_display_return_home();        /* Cursor at home position */
+	struct gpio_desc* target_desc = NULL;
+	struct lcd_private_data* dev_data = (struct lcd_private_data*)dev_get_drvdata(dev);
+	
+	target_desc = pin_type == LCD_CMD ? dev_data->cmd_desc[index] : dev_data->data_descs->desc[index];
+
+	if ((int)out_value <= HIGH_VALUE)
+		gpiod_set_value(target_desc, (int)out_value);
+}
+
+void lcd_deinit(struct device* dev)
+{
+	lcd_display_clear(dev);      	  /* Clear display */
+	lcd_display_return_home(dev);        /* Cursor at home position */
 }
 
 /* 
@@ -22,58 +25,58 @@ void lcd_deinit(void)
  * https://www.sparkfun.com/datasheets/LCD/HD44780.pdf
  * Ref. page number 46 , Figure 24 for intialization sequence for 4-bit interface 
  */
-void lcd_init(void)
+void lcd_init(struct device* dev)
 {
-	usleep(40 * 1000);
+	mdelay(40);
 	
 	/* RS=0 for LCD command */
-	gpio_write_value(GPIO_LCD_RS,LOW_VALUE);
+	gpio_write_value(dev, LCD_CMD, GPIO_LCD_RS, LOW_VALUE);
 	
 	/*R/nW = 0, for write */
-	gpio_write_value(GPIO_LCD_RW,LOW_VALUE);
+	gpio_write_value(dev, LCD_CMD, GPIO_LCD_RW, LOW_VALUE);
 	
-	write_4_bits(0x03);
-	usleep( 5 * 1000);
+	write_4_bits(dev, 0x03);
+	mdelay(5);
 	
-	write_4_bits(0x03);
-	usleep(100);
+	write_4_bits(dev, 0x03);
+	mdelay(1);
 	
-	write_4_bits(0x03);
-	write_4_bits(0x02);
+	write_4_bits(dev, 0x03);
+	write_4_bits(dev, 0x02);
 
     /*4 bit data mode, 2 lines selection , font size 5x8 */
-	lcd_send_command(LCD_CMD_4DL_2N_5X8F);
+	lcd_send_command(dev, LCD_CMD_4DL_2N_5X8F);
 	
 	/* Display ON, Cursor ON */
-	lcd_send_command(LCD_CMD_DON_CURON);
+	lcd_send_command(dev, LCD_CMD_DON_CURON);
 	
-	lcd_display_clear();
+	lcd_display_clear(dev);
 	
 	/*Address auto increment*/
-	lcd_send_command(LCD_CMD_INCADD);	
+	lcd_send_command(dev, LCD_CMD_INCADD);	
 }
 
 /*Clear the display */
-void lcd_display_clear(void)
+void lcd_display_clear(struct device* dev)
 {
-	lcd_send_command(LCD_CMD_DIS_CLEAR);
+	lcd_send_command(dev, LCD_CMD_DIS_CLEAR);
 	/*
 	 * check page number 24 of datasheet.
 	 * display clear command execution wait time is around 2ms
 	 */
-	usleep(2000); 
+	mdelay(2); 
 }
 
 /*Cursor returns to home position */
-void lcd_display_return_home(void)
+void lcd_display_return_home(struct device* dev)
 {
 
-	lcd_send_command(LCD_CMD_DIS_RETURN_HOME);
+	lcd_send_command(dev, LCD_CMD_DIS_RETURN_HOME);
 	/*
 	 * check page number 24 of datasheet.
 	 * return home command execution wait time is around 2ms
 	 */
-	usleep(2000);
+	mdelay(2);
 }
 
 
@@ -82,18 +85,18 @@ void lcd_display_return_home(void)
   * @param  Row Number (1 to 2)
   * @param  Column Number (1 to 16) Assuming a 2 X 16 characters display
   */
-void lcd_set_cursor(uint8_t row, uint8_t column)
+void lcd_set_cursor(struct device* dev, char row, char column)
 {
 	column--;
 	switch (row)
 	{
 		case 1:
 			/* Set cursor to 1st row address and add index*/
-			lcd_send_command(column |= DDRAM_FIRST_LINE_BASE_ADDR);
+			lcd_send_command(dev, column |= DDRAM_FIRST_LINE_BASE_ADDR);
 		break;
 		case 2:
 			/* Set cursor to 2nd row address and add index*/
-			lcd_send_command(column |= DDRAM_SECOND_LINE_BASE_ADDR);
+			lcd_send_command(dev, column |= DDRAM_SECOND_LINE_BASE_ADDR);
 		break;
 		default:
 		break;
@@ -101,28 +104,28 @@ void lcd_set_cursor(uint8_t row, uint8_t column)
 }
 
 /* writes 4 bits of data/command on to D4,D5,D6,D7 lines */
-static void write_4_bits(uint8_t data)
+void write_4_bits(struct device* dev, char data)
 {
 	/* 4 bits parallel data write */
-	gpio_write_value(GPIO_LCD_D4, (data >> 0 ) & 0x1);
-	gpio_write_value(GPIO_LCD_D5, (data >> 1 ) & 0x1);
-	gpio_write_value(GPIO_LCD_D6, (data >> 2 ) & 0x1);
-	gpio_write_value(GPIO_LCD_D7, (data >> 3 ) & 0x1);
+	gpio_write_value(dev, LCD_DATA, GPIO_LCD_D4, (data >> 0 ) & 0x1);
+	gpio_write_value(dev, LCD_DATA, GPIO_LCD_D5, (data >> 1 ) & 0x1);
+	gpio_write_value(dev, LCD_DATA, GPIO_LCD_D6, (data >> 2 ) & 0x1);
+	gpio_write_value(dev, LCD_DATA, GPIO_LCD_D7, (data >> 3 ) & 0x1);
 	
-	lcd_enable();
+	lcd_enable(dev);
 	
 }
 /*
  * @brief call this function to make LCD latch the data lines in to its internal registers.
  */
-void lcd_enable(void)
+void lcd_enable(struct device* dev)
 { 
-	gpio_write_value(GPIO_LCD_EN,LOW_VALUE);
-	usleep(1);
-	gpio_write_value(GPIO_LCD_EN,HIGH_VALUE);
-	usleep(1);
-	gpio_write_value(GPIO_LCD_EN,LOW_VALUE);
-	usleep(100); /* execution time > 37 micro seconds */
+	gpio_write_value(dev, LCD_CMD, GPIO_LCD_EN, LOW_VALUE);
+	mdelay(1);
+	gpio_write_value(dev, LCD_CMD, GPIO_LCD_EN, HIGH_VALUE);
+	mdelay(1);
+	gpio_write_value(dev, LCD_CMD, GPIO_LCD_EN, LOW_VALUE);
+	mdelay(1); /* execution time > 37 micro seconds */
 }
 
 /*
@@ -131,27 +134,27 @@ void lcd_enable(void)
  *First higher nibble of the data will be sent on to the data lines D4,D5,D6,D7
  *Then lower niblle of the data will be set on to the data lines D4,D5,D6,D7
  */
-void lcd_print_char(uint8_t data)
+void lcd_print_char(struct device* dev, char data)
 {
 
 	//RS=1, for user data
-	gpio_write_value(GPIO_LCD_RS,HIGH_VALUE);
+	gpio_write_value(dev, LCD_CMD, GPIO_LCD_RS, HIGH_VALUE);
 	
 	/*R/nW = 0, for write */
-	gpio_write_value(GPIO_LCD_RW,LOW_VALUE);
+	gpio_write_value(dev, LCD_CMD, GPIO_LCD_RW, LOW_VALUE);
 	
-	write_4_bits(data >> 4); /* higher nibble */
-	write_4_bits(data);      /* lower nibble */
+	write_4_bits(dev, data >> 4); /* higher nibble */
+	write_4_bits(dev, data);      /* lower nibble */
 }
 
-void lcd_print_string(char *message)
+void lcd_print_string(struct device* dev, char *message)
 {
 
-      do
-      {
-          lcd_print_char((uint8_t)*message++);
-      }
-      while (*message != '\0');
+	do
+	{
+		lcd_print_char(dev, (char)*message++);
+	}
+	while (*message != '\0');
 
 }
 
@@ -159,20 +162,20 @@ void lcd_print_string(char *message)
 /*
  *This function sends a command to the LCD 
  */
-void lcd_send_command(uint8_t command)
+void lcd_send_command(struct device* dev, char command)
 {
 	/* RS=0 for LCD command */
-	gpio_write_value(GPIO_LCD_RS,LOW_VALUE);
+	gpio_write_value(dev, LCD_CMD, GPIO_LCD_RS, LOW_VALUE);
 	
 	/*R/nW = 0, for write */
-	gpio_write_value(GPIO_LCD_RW,LOW_VALUE);
+	gpio_write_value(dev, LCD_CMD, GPIO_LCD_RW, LOW_VALUE);
 	
-	write_4_bits(command >> 4); /* higher nibble */
-	write_4_bits(command);     /* lower nibble */
+	write_4_bits(dev, command >> 4); /* higher nibble */
+	write_4_bits(dev, command);     /* lower nibble */
 
 }
 
-void lcd_printf(const char *fmt, ...)
+void lcd_printf(struct device* dev, const char *fmt, ...)
 {
       int i;
       uint32_t text_size, letter;
@@ -192,7 +195,7 @@ void lcd_printf(const char *fmt, ...)
         else
         {
           if ((letter > 0x1F) && (letter < 0x80))
-              lcd_print_char(letter);
+              lcd_print_char(dev, letter);
         }
       }
   }

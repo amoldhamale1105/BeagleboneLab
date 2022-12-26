@@ -1,3 +1,4 @@
+#include "lcd.h"
 #include "lcd_platform_driver.h"
 
 MODULE_LICENSE("GPL");
@@ -71,7 +72,7 @@ int lcd_driver_probe(struct platform_device* pdev)
     struct of_device_id* match = NULL;
     int i = 0, ret;
 
-    dev_info(dev, "16x2 LCD detected\n");
+    pr_info("16x2 LCD detected\n");
 
     match = (struct of_device_id*)of_match_device(dev->driver->of_match_table, dev);
     if (match == NULL){
@@ -124,14 +125,18 @@ int lcd_driver_probe(struct platform_device* pdev)
         dev_err(dev, "Error in device creation\n");
         return PTR_ERR(drv_data.dev_lcd);
     }
+
+    lcd_init(drv_data.dev_lcd);
+    lcd_print_string(drv_data.dev_lcd, "16x2 LCD driver");
     
     return 0;
 }
 
 int lcd_driver_remove(struct platform_device* pdev)
 {
+    lcd_deinit(drv_data.dev_lcd);
     device_unregister(drv_data.dev_lcd);
-    dev_info(&pdev->dev,"LCD unregistered\n");
+    pr_info("LCD unregistered\n");
     return 0;
 }
 

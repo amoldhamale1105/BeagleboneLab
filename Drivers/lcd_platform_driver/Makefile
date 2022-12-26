@@ -1,5 +1,5 @@
 obj-m := lcd_driver.o
-lcd_driver-objs += lcd_platform_driver.o #gpio.o lcd.o
+lcd_driver-objs += lcd_platform_driver.o lcd.o
 ARCH=arm
 CROSS_COMPILE=arm-linux-gnueabihf-
 KERN_DIR=/home/amol/Projects/BBB/linux/
