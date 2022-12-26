@@ -91,29 +91,29 @@ int lcd_driver_probe(struct platform_device* pdev)
     dev->driver_data = (void*)dev_data;
 
     /* Allocate memory for 3 command gpio descriptor addresses (rs, rw, en) */
-    dev_data->desc = (struct gpio_desc**)devm_kzalloc(dev, sizeof(struct gpio_desc*)*3, GFP_KERNEL);
+    dev_data->cmd_desc = (struct gpio_desc**)devm_kzalloc(dev, sizeof(struct gpio_desc*)*3, GFP_KERNEL);
     
-    dev_data->desc[0] = devm_gpiod_get(dev, "rs", GPIOD_ASIS);
-    dev_data->desc[1] = devm_gpiod_get(dev, "rw", GPIOD_ASIS);
-    dev_data->desc[2] = devm_gpiod_get(dev, "en", GPIOD_ASIS);
-    dev_data->desc_arr = devm_gpiod_get_array(dev, "data", GPIOD_ASIS);
+    dev_data->cmd_desc[0] = devm_gpiod_get(dev, "rs", GPIOD_ASIS);
+    dev_data->cmd_desc[1] = devm_gpiod_get(dev, "rw", GPIOD_ASIS);
+    dev_data->cmd_desc[2] = devm_gpiod_get(dev, "en", GPIOD_ASIS);
+    dev_data->data_descs = devm_gpiod_get_array(dev, "data", GPIOD_ASIS);
     
-    if ((ret = gpiod_direction_output(dev_data->desc[0], 0))){
+    if ((ret = gpiod_direction_output(dev_data->cmd_desc[0], 0))){
         dev_err(dev, "Direction setting failed for rs pin\n");
         return ret;
     }
-    if ((ret = gpiod_direction_output(dev_data->desc[1], 0))){
+    if ((ret = gpiod_direction_output(dev_data->cmd_desc[1], 0))){
         dev_err(dev, "Direction setting failed for rw pin\n");
         return ret;
     }
-    if ((ret = gpiod_direction_output(dev_data->desc[2], 0))){
+    if ((ret = gpiod_direction_output(dev_data->cmd_desc[2], 0))){
         dev_err(dev, "Direction setting failed for en pin\n");
         return ret;
     }
 
-    for(i = 0; i < dev_data->desc_arr->ndescs; i++)
+    for(i = 0; i < dev_data->data_descs->ndescs; i++)
     {
-        if ((ret = gpiod_direction_output(dev_data->desc_arr->desc[i], 0))){
+        if ((ret = gpiod_direction_output(dev_data->data_descs->desc[i], 0))){
             dev_err(dev, "Direction setting failed for D%d pin\n", i+4);
             return ret;
         }
@@ -130,6 +130,8 @@ int lcd_driver_probe(struct platform_device* pdev)
 
 int lcd_driver_remove(struct platform_device* pdev)
 {
+    device_unregister(drv_data.dev_lcd);
+    dev_info(&pdev->dev,"LCD unregistered\n");
     return 0;
 }
 
