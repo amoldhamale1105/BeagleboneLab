@@ -142,25 +142,103 @@ int lcd_driver_remove(struct platform_device* pdev)
 
 ssize_t lcdcmd_store(struct device* dev, struct device_attribute* dev_attr, const char* buf, size_t count)
 {
-    return 0;
+    struct lcd_private_data* dev_data = (struct lcd_private_data*)dev_get_drvdata(dev);
+    u8 cmd;
+    ssize_t ret;
+    
+    mutex_lock(&dev_data->lcd_lock);
+    ret = kstrtou8(buf, 0, &cmd);
+    if (ret)
+        goto out;
+
+    if (cmd == LCD_CMD_DIS_CLEAR)
+        lcd_display_clear(drv_data.dev_lcd);
+    else if (cmd == LCD_CMD_DIS_RETURN_HOME)
+        lcd_display_return_home(drv_data.dev_lcd);
+    else
+        lcd_send_command(drv_data.dev_lcd, cmd);
+    ret = count;
+
+out:
+    mutex_unlock(&dev_data->lcd_lock);
+    return ret;
 }
 
 ssize_t lcdscroll_store(struct device* dev, struct device_attribute* dev_attr, const char* buf, size_t count)
 {
-    return 0;
+    struct lcd_private_data* dev_data = (struct lcd_private_data*)dev_get_drvdata(dev);
+    ssize_t ret;
+
+    mutex_lock(&dev_data->lcd_lock);
+    if (sysfs_streq(buf, "on")){
+        lcd_display_shift_left(drv_data.dev_lcd);
+        ret = count;
+    }
+    else
+        ret = -EINVAL;
+
+    mutex_unlock(&dev_data->lcd_lock);
+    return ret;
 }
 
 ssize_t lcdtext_store(struct device* dev, struct device_attribute* dev_attr, const char* buf, size_t count)
 {
-    return 0;
+    struct lcd_private_data* dev_data = (struct lcd_private_data*)dev_get_drvdata(dev);
+
+    mutex_lock(&dev_data->lcd_lock);
+    lcd_print_string(drv_data.dev_lcd, buf);
+    mutex_unlock(&dev_data->lcd_lock);
+
+    return count;
 }
 
 ssize_t lcdxy_show(struct device* dev, struct device_attribute* dev_attr, char* buf)
 {
-    return 0;
+    struct lcd_private_data* dev_data = (struct lcd_private_data*)dev_get_drvdata(dev);
+    ssize_t ret;
+
+    mutex_lock(&dev_data->lcd_lock);
+    ret = sprintf(buf, "(%d,%d)\n", dev_data->cursor_pos[0], dev_data->cursor_pos[1]);
+    mutex_unlock(&dev_data->lcd_lock);
+
+    return ret;
 }
 
 ssize_t lcdxy_store(struct device* dev, struct device_attribute* dev_attr, const char* buf, size_t count)
 {
-    return 0;
+    struct lcd_private_data* dev_data = (struct lcd_private_data*)dev_get_drvdata(dev);
+    ssize_t ret;
+    int xy_val;
+
+    mutex_lock(&dev_data->lcd_lock);
+    ret = kstrtoint(buf, 0, &xy_val);
+    if (ret)
+        goto out;
+    if ((xy_val / 100 == 1) && (xy_val % 100 <= 40)){
+        dev_data->cursor_pos[0] = 1;
+        dev_data->cursor_pos[1] = xy_val % 100;
+    }
+    else if ((xy_val / 100 == 2) && (xy_val % 100 <= 40)){
+        dev_data->cursor_pos[0] = 2;
+        dev_data->cursor_pos[1] = xy_val % 100;
+    }
+    else if (xy_val / 10 == 1){
+        dev_data->cursor_pos[0] = 1;
+        dev_data->cursor_pos[1] = xy_val % 10;
+    }
+    else if (xy_val / 10 == 2){
+        dev_data->cursor_pos[0] = 2;
+        dev_data->cursor_pos[1] = xy_val % 10;
+    }
+    else{
+        ret = -EINVAL;
+        goto out;
+    }
+
+    lcd_set_cursor(drv_data.dev_lcd, dev_data->cursor_pos[0], dev_data->cursor_pos[1]);
+    ret = count;
+    
+out:
+    mutex_unlock(&dev_data->lcd_lock);
+    return ret;
 }

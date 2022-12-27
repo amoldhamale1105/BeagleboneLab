@@ -2,7 +2,7 @@
 #include "lcd.h"
 #include "lcd_platform_driver.h"
 
-void gpio_write_value(struct device* dev, int pin_type, int index, char out_value)
+void gpio_write_value(struct device* dev, int pin_type, int index, u8 out_value)
 {
 	struct gpio_desc* target_desc = NULL;
 	struct lcd_private_data* dev_data = (struct lcd_private_data*)dev_get_drvdata(dev);
@@ -59,33 +59,47 @@ void lcd_init(struct device* dev)
 /*Clear the display */
 void lcd_display_clear(struct device* dev)
 {
+	struct lcd_private_data* dev_data = (struct lcd_private_data*)dev_get_drvdata(dev);
 	lcd_send_command(dev, LCD_CMD_DIS_CLEAR);
 	/*
 	 * check page number 24 of datasheet.
 	 * display clear command execution wait time is around 2ms
 	 */
-	mdelay(2); 
+	mdelay(2);
+	dev_data->cursor_pos[0] = 1;
+	dev_data->cursor_pos[1] = 1;
 }
 
 /*Cursor returns to home position */
 void lcd_display_return_home(struct device* dev)
 {
-
+	struct lcd_private_data* dev_data = (struct lcd_private_data*)dev_get_drvdata(dev);
 	lcd_send_command(dev, LCD_CMD_DIS_RETURN_HOME);
 	/*
 	 * check page number 24 of datasheet.
 	 * return home command execution wait time is around 2ms
 	 */
 	mdelay(2);
+	dev_data->cursor_pos[0] = 1;
+	dev_data->cursor_pos[1] = 1;
 }
 
+/**
+ * @brief Shift LCD display to the left by one position
+ * 
+ */
+void lcd_display_shift_left(struct device* dev)
+{
+	lcd_send_command(dev, LCD_CMD_DIS_SHIFT_LEFT);
+	mdelay(1);
+}
 
 /**
   * @brief  Set Lcd to a specified location given by row and column information
   * @param  Row Number (1 to 2)
   * @param  Column Number (1 to 16) Assuming a 2 X 16 characters display
   */
-void lcd_set_cursor(struct device* dev, char row, char column)
+void lcd_set_cursor(struct device* dev, u8 row, u8 column)
 {
 	column--;
 	switch (row)
@@ -104,7 +118,7 @@ void lcd_set_cursor(struct device* dev, char row, char column)
 }
 
 /* writes 4 bits of data/command on to D4,D5,D6,D7 lines */
-void write_4_bits(struct device* dev, char data)
+void write_4_bits(struct device* dev, u8 data)
 {
 	/* 4 bits parallel data write */
 	gpio_write_value(dev, LCD_DATA, GPIO_LCD_D4, (data >> 0 ) & 0x1);
@@ -136,7 +150,6 @@ void lcd_enable(struct device* dev)
  */
 void lcd_print_char(struct device* dev, char data)
 {
-
 	//RS=1, for user data
 	gpio_write_value(dev, LCD_CMD, GPIO_LCD_RS, HIGH_VALUE);
 	
@@ -147,9 +160,8 @@ void lcd_print_char(struct device* dev, char data)
 	write_4_bits(dev, data);      /* lower nibble */
 }
 
-void lcd_print_string(struct device* dev, char *message)
+void lcd_print_string(struct device* dev, const char *message)
 {
-
 	do
 	{
 		lcd_print_char(dev, (char)*message++);
@@ -158,11 +170,10 @@ void lcd_print_string(struct device* dev, char *message)
 
 }
 
-
 /*
  *This function sends a command to the LCD 
  */
-void lcd_send_command(struct device* dev, char command)
+void lcd_send_command(struct device* dev, u8 command)
 {
 	/* RS=0 for LCD command */
 	gpio_write_value(dev, LCD_CMD, GPIO_LCD_RS, LOW_VALUE);
@@ -177,25 +188,25 @@ void lcd_send_command(struct device* dev, char command)
 
 void lcd_printf(struct device* dev, const char *fmt, ...)
 {
-      int i;
-      uint32_t text_size, letter;
+	int i;
+	uint32_t text_size, letter;
       static char text_buffer[32];
-      va_list args;
+	va_list args;
 
-      va_start(args, fmt);
-      text_size = vsprintf(text_buffer, fmt, args);
+	va_start(args, fmt);
+	text_size = vsprintf(text_buffer, fmt, args);
 
-      // Process the string
-      for (i = 0; i < text_size; i++)
-      {
-        letter = text_buffer[i];
+	// Process the string
+	for (i = 0; i < text_size; i++)
+	{
+	letter = text_buffer[i];
 
-        if (letter == 10)
-          break;
-        else
-        {
-          if ((letter > 0x1F) && (letter < 0x80))
-              lcd_print_char(dev, letter);
-        }
-      }
-  }
+	if (letter == 10)
+		break;
+	else
+	{
+		if ((letter > 0x1F) && (letter < 0x80))
+			lcd_print_char(dev, letter);
+	}
+	}
+}

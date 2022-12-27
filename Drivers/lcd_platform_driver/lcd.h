@@ -1,3 +1,5 @@
+#include <linux/types.h>
+
 #ifndef LCD_DRIVER_H_
 #define LCD_DRIVER_H_
 
@@ -18,6 +20,7 @@
 #define LCD_CMD_INCADD       		0x06
 #define LCD_CMD_DIS_CLEAR    		0X01
 #define LCD_CMD_DIS_RETURN_HOME  	0x02
+#define LCD_CMD_DIS_SHIFT_LEFT      0x18
 
 
 /*Sets CGRAM address. CGRAM data is sent and received after this setting. */
@@ -32,25 +35,26 @@
 #define LCD_ENABLE 1
 #define LCD_DISABLE 0
 
-#define LOW_VALUE 0
 #define HIGH_VALUE 1
+#define LOW_VALUE 0
 
 struct device;
 
 //public function prototypes
 void lcd_deinit(struct device*);
 void lcd_init(struct device*);
-void lcd_set_cursor(struct device*, char row, char column);
+void lcd_set_cursor(struct device*, u8 row, u8 column);
 void lcd_enable(struct device*);
 void lcd_print_char(struct device*, char ascii_Value);
-void lcd_print_string(struct device*, char *message);
-void lcd_send_command(struct device*, char command);
+void lcd_print_string(struct device*, const char *message);
+void lcd_send_command(struct device*, u8 command);
 void lcd_display_clear(struct device*);
 void lcd_printf(struct device*, const char *fmt, ...);
 void lcd_display_return_home(struct device*);
-void write_4_bits(struct device*, char data);
+void lcd_display_shift_left(struct device*);
+void write_4_bits(struct device*, u8 data);
 
 //gpio access methods
-void gpio_write_value(struct device*, int pin_type, int index, char out_value);
+void gpio_write_value(struct device*, int pin_type, int index, u8 out_value);
 
 #endif /* LCD_DRIVER_H_ */

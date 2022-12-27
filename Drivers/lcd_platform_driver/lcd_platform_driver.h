@@ -12,6 +12,7 @@
 #include <linux/of_device.h>
 #include <linux/slab.h>
 #include <linux/mutex.h>
+#include <linux/types.h>
 
 #undef pr_fmt
 #define pr_fmt(fmt) "%s :" fmt,__func__
@@ -35,6 +36,7 @@ ssize_t lcdxy_store(struct device*, struct device_attribute*, const char*, size_
 //Device private data structure
 struct lcd_private_data
 {
+    int cursor_pos[2];
     struct gpio_desc** cmd_desc;
     struct gpio_descs* data_descs;
     struct mutex lcd_lock;
