@@ -3,8 +3,8 @@
 #ifndef LCD_DRIVER_H_
 #define LCD_DRIVER_H_
 
-#define LCD_CMD 0
-#define LCD_DATA 1
+#define LCD_INSTR 0
+#define LCD_DATA  1
 
 #define GPIO_LCD_RS   0   /*  Register selection (Character vs. Command) */ 
 #define GPIO_LCD_RW   1   /*  Read/write     */

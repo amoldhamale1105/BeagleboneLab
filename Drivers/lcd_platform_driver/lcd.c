@@ -7,7 +7,7 @@ void gpio_write_value(struct device* dev, int pin_type, int index, u8 out_value)
 	struct gpio_desc* target_desc = NULL;
 	struct lcd_private_data* dev_data = (struct lcd_private_data*)dev_get_drvdata(dev);
 	
-	target_desc = pin_type == LCD_CMD ? dev_data->cmd_desc[index] : dev_data->data_descs->desc[index];
+	target_desc = pin_type == LCD_INSTR ? dev_data->instr_desc[index] : dev_data->data_descs->desc[index];
 
 	if ((int)out_value <= HIGH_VALUE)
 		gpiod_set_value(target_desc, (int)out_value);
@@ -30,10 +30,10 @@ void lcd_init(struct device* dev)
 	mdelay(40);
 	
 	/* RS=0 for LCD command */
-	gpio_write_value(dev, LCD_CMD, GPIO_LCD_RS, LOW_VALUE);
+	gpio_write_value(dev, LCD_INSTR, GPIO_LCD_RS, LOW_VALUE);
 	
 	/*R/nW = 0, for write */
-	gpio_write_value(dev, LCD_CMD, GPIO_LCD_RW, LOW_VALUE);
+	gpio_write_value(dev, LCD_INSTR, GPIO_LCD_RW, LOW_VALUE);
 	
 	write_4_bits(dev, 0x03);
 	mdelay(5);
@@ -134,11 +134,11 @@ void write_4_bits(struct device* dev, u8 data)
  */
 void lcd_enable(struct device* dev)
 { 
-	gpio_write_value(dev, LCD_CMD, GPIO_LCD_EN, LOW_VALUE);
+	gpio_write_value(dev, LCD_INSTR, GPIO_LCD_EN, LOW_VALUE);
 	mdelay(1);
-	gpio_write_value(dev, LCD_CMD, GPIO_LCD_EN, HIGH_VALUE);
+	gpio_write_value(dev, LCD_INSTR, GPIO_LCD_EN, HIGH_VALUE);
 	mdelay(1);
-	gpio_write_value(dev, LCD_CMD, GPIO_LCD_EN, LOW_VALUE);
+	gpio_write_value(dev, LCD_INSTR, GPIO_LCD_EN, LOW_VALUE);
 	mdelay(1); /* execution time > 37 micro seconds */
 }
 
@@ -151,10 +151,10 @@ void lcd_enable(struct device* dev)
 void lcd_print_char(struct device* dev, char data)
 {
 	//RS=1, for user data
-	gpio_write_value(dev, LCD_CMD, GPIO_LCD_RS, HIGH_VALUE);
+	gpio_write_value(dev, LCD_INSTR, GPIO_LCD_RS, HIGH_VALUE);
 	
 	/*R/nW = 0, for write */
-	gpio_write_value(dev, LCD_CMD, GPIO_LCD_RW, LOW_VALUE);
+	gpio_write_value(dev, LCD_INSTR, GPIO_LCD_RW, LOW_VALUE);
 	
 	write_4_bits(dev, data >> 4); /* higher nibble */
 	write_4_bits(dev, data);      /* lower nibble */
@@ -176,10 +176,10 @@ void lcd_print_string(struct device* dev, const char *message)
 void lcd_send_command(struct device* dev, u8 command)
 {
 	/* RS=0 for LCD command */
-	gpio_write_value(dev, LCD_CMD, GPIO_LCD_RS, LOW_VALUE);
+	gpio_write_value(dev, LCD_INSTR, GPIO_LCD_RS, LOW_VALUE);
 	
 	/*R/nW = 0, for write */
-	gpio_write_value(dev, LCD_CMD, GPIO_LCD_RW, LOW_VALUE);
+	gpio_write_value(dev, LCD_INSTR, GPIO_LCD_RW, LOW_VALUE);
 	
 	write_4_bits(dev, command >> 4); /* higher nibble */
 	write_4_bits(dev, command);     /* lower nibble */

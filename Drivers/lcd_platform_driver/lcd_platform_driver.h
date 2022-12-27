@@ -37,7 +37,7 @@ ssize_t lcdxy_store(struct device*, struct device_attribute*, const char*, size_
 struct lcd_private_data
 {
     int cursor_pos[2];
-    struct gpio_desc** cmd_desc;
+    struct gpio_desc** instr_desc;
     struct gpio_descs* data_descs;
     struct mutex lcd_lock;
 };
