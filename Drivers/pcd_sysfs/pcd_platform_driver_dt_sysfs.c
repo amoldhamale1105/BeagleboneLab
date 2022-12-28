@@ -345,6 +345,6 @@ module_init(pcd_platform_driver_init);
 module_exit(pcd_platform_driver_cleanup);
 
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Amol");
-MODULE_DESCRIPTION("Platform driver for platform devices");
+MODULE_AUTHOR("Amol Dhamale");
+MODULE_DESCRIPTION("Platform driver for pseudo char devices with attributes");
 MODULE_INFO(board, "BBB Rev A5");
