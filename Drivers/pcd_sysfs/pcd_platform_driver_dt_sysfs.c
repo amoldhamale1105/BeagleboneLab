@@ -192,7 +192,7 @@ int pcd_platform_driver_probe(struct platform_device* pdev)
     pr_info("ConfigItem2 = %d\n", pcdev_config[driver_data].configItem2);
     
     //Dynamically allocate mem for device buffer using size info and platform data
-    dev_data->buffer = (char*)devm_kzalloc(&pdev->dev, sizeof(dev_data->pdata.size), GFP_KERNEL);
+    dev_data->buffer = (char*)devm_kzalloc(&pdev->dev, dev_data->pdata.size, GFP_KERNEL);
     if(!dev_data->buffer){
         pr_info("Can't allocate memory\n");
         ret = -ENOMEM;
