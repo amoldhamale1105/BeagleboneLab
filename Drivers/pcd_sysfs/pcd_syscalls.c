@@ -40,8 +40,6 @@ ssize_t pcd_read(struct file *filp, char __user *buff, size_t count, loff_t *f_p
 {
     struct pcdev_private_data *pcdev_data = (struct pcdev_private_data*)filp->private_data;
 	int max_size = pcdev_data->pdata.size;
-    
-    mutex_lock(&pcdev_data->pcd_lock);
 	
     pr_info("read requested for %zu bytes\n", count);
 	pr_info("Current file position = %lld\n", *f_pos);
@@ -56,8 +54,6 @@ ssize_t pcd_read(struct file *filp, char __user *buff, size_t count, loff_t *f_p
 	pr_info("Number of bytes successfully read = %zu\n", count);
 	pr_info("Updated file position = %lld\n", *f_pos);
 
-    mutex_unlock(&pcdev_data->pcd_lock);
-
 	//Return the number of bytes successfully read
 	return count;
 }
@@ -66,6 +62,7 @@ ssize_t pcd_write(struct file *filp, const char __user *buff, size_t count, loff
 {
     struct pcdev_private_data *pcdev_data = (struct pcdev_private_data*)filp->private_data;
 	int max_size = pcdev_data->pdata.size;
+    ssize_t ret;
     
     mutex_lock(&pcdev_data->pcd_lock);
 	pr_info("write requested for %zu bytes\n", count);
@@ -74,20 +71,24 @@ ssize_t pcd_write(struct file *filp, const char __user *buff, size_t count, loff
 	if((*f_pos + count) > max_size)
 		count = max_size - *f_pos;
 	
-	if(!count)
-		return -ENOMEM;
+	if(!count){
+        ret = -ENOMEM;
+        goto out;
+    }
 	
-	if(copy_from_user(&pcdev_data->buffer[*f_pos], buff, count))
-		return -EFAULT; 
+	if(copy_from_user(&pcdev_data->buffer[*f_pos], buff, count)){
+        ret = -EFAULT;
+        goto out;
+    }
 
 	*f_pos += count;
+    ret = count;
 	pr_info("Number of bytes successfully written = %zu\n", count);
 	pr_info("Updated file position = %lld\n", *f_pos);
 
+out:
     mutex_unlock(&pcdev_data->pcd_lock);
-
-	//Return the number of bytes successfully written
-	return count;
+	return ret;
 }
 
 static int check_permission(int dev_perm, int access_mode)
